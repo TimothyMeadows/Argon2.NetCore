@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30128.74
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Argon2.NetCore", "Argon2.NetCore\Argon2.NetCore.csproj", "{2B3BE0D3-2243-4C3B-BD5F-231B15B0A4BB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Argon2.NetCore.Examples", "Argon2.NetCore.Examples\Argon2.NetCore.Examples.csproj", "{778D09E0-F085-479A-83CF-C9B9E6A2C223}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2B3BE0D3-2243-4C3B-BD5F-231B15B0A4BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B3BE0D3-2243-4C3B-BD5F-231B15B0A4BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B3BE0D3-2243-4C3B-BD5F-231B15B0A4BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B3BE0D3-2243-4C3B-BD5F-231B15B0A4BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{778D09E0-F085-479A-83CF-C9B9E6A2C223}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{778D09E0-F085-479A-83CF-C9B9E6A2C223}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{778D09E0-F085-479A-83CF-C9B9E6A2C223}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{778D09E0-F085-479A-83CF-C9B9E6A2C223}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C4E7B3A8-33FE-44B4-81DC-0D8BEA0045FE}
+	EndGlobalSection
+EndGlobal
