@@ -35,8 +35,7 @@ namespace Argon2.NetCore
         private int _threads = 1;
         private int _timeCost = 3;
         private readonly byte[] _salt;
-        private readonly PinnedMemory<byte> _bufferPin;
-        private byte[] _buffer = new byte[1];
+        private byte[] _buffer;
         private readonly PinnedMemory<byte> _associatedDataPin;
         private readonly byte[] _associatedData;
         private readonly PinnedMemory<byte> _key;
@@ -104,7 +103,6 @@ namespace Argon2.NetCore
             _memoryBlockCount = _laneLength * _lanes;
             _memory = new PinnedMemory<ulong>(new ulong[_blockSize * _memoryBlockCount / 8]);
             _memoryBlocks = new Blocks(_memory.ToArray(), _memoryBlockCount);
-            _bufferPin = new PinnedMemory<byte>(_buffer);
         }
 
         public void Update(byte value)
@@ -909,7 +907,6 @@ namespace Argon2.NetCore
         {
             _memory?.Dispose();
             _key?.Dispose();
-            _bufferPin?.Dispose();
             _associatedDataPin?.Dispose();
         }
     }
