@@ -11,9 +11,8 @@ namespace Argon2.NetCore.Examples
             var iv = new byte[16];
             var key = new byte[32];
 
-            using var provider = new RNGCryptoServiceProvider();
-            provider.GetBytes(iv);
-            provider.GetBytes(key);
+            RandomNumberGenerator.Fill(iv);
+            RandomNumberGenerator.Fill(key);
 
             using var keyPin = new PinnedMemory<byte>(key, false);
             using var argon2 = new Argon2(keyPin, iv)
