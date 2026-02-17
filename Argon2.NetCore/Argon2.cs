@@ -789,7 +789,7 @@ namespace Argon2.NetCore
             var outputLength = hash.Length > 64 ? 64 : hash.Length;
             using var intermediateHash = new PinnedMemory<byte>(new byte[64]);
             Store32(outlenBytes, hash.Length);
-            using (var blakeHash = new Blake2b.NetCore.Blake2b())
+            using (var blakeHash = new Blake2b.NetCore.Blake2b(outputLength * 8))
             {
                 blakeHash.UpdateBlock(outlenBytes, 0, outlenBytes.Length);
                 blakeHash.UpdateBlock(inbuf, 0, inbuf.Length);
@@ -811,7 +811,7 @@ namespace Argon2.NetCore
             while (pos < lastHashIndex)
             {
                 Array.Copy(intermediateHash.ToArray(), toHash, intermediateHash.Length);
-                using var blakeHash = new Blake2b.NetCore.Blake2b();
+                using var blakeHash = new Blake2b.NetCore.Blake2b(512);
                 blakeHash.UpdateBlock(toHash, 0, toHash.Length);
                 blakeHash.DoFinal(intermediateHash, 0);
                 blakeHash.Reset();
@@ -821,13 +821,14 @@ namespace Argon2.NetCore
             }
 
             Array.Copy(intermediateHash.ToArray(), toHash, intermediateHash.Length);
-            using (var blakeHash = new Blake2b.NetCore.Blake2b())
+            var finalOutputLength = hash.Length - pos;
+            using (var blakeHash = new Blake2b.NetCore.Blake2b(finalOutputLength * 8))
             {
                 blakeHash.UpdateBlock(toHash, 0, toHash.Length);
                 blakeHash.DoFinal(intermediateHash, 0);
                 blakeHash.Reset();
 
-                Array.Copy(intermediateHash.ToArray(), 0, hash, pos, hash.Length - pos);
+                Array.Copy(intermediateHash.ToArray(), 0, hash, pos, finalOutputLength);
             }
         }
 

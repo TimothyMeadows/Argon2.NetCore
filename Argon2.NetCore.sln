@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Argon2.NetCore", "Argon2.Ne
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Argon2.NetCore.Examples", "Argon2.NetCore.Examples\Argon2.NetCore.Examples.csproj", "{778D09E0-F085-479A-83CF-C9B9E6A2C223}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Argon2.NetCore.Tests", "Argon2.NetCore.Tests\Argon2.NetCore.Tests.csproj", "{8EFB79EF-7681-4C33-A7BE-95019125486A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{778D09E0-F085-479A-83CF-C9B9E6A2C223}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{778D09E0-F085-479A-83CF-C9B9E6A2C223}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{778D09E0-F085-479A-83CF-C9B9E6A2C223}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8EFB79EF-7681-4C33-A7BE-95019125486A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8EFB79EF-7681-4C33-A7BE-95019125486A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8EFB79EF-7681-4C33-A7BE-95019125486A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8EFB79EF-7681-4C33-A7BE-95019125486A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
