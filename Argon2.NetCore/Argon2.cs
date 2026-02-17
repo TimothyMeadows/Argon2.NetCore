@@ -34,12 +34,13 @@ namespace Argon2.NetCore
         private int _lanes = 4;
         private int _threads = 1;
         private int _timeCost = 3;
+        private const int _minimumHashLength = 4;
         private readonly byte[] _salt;
         private byte[] _buffer;
         private readonly PinnedMemory<byte> _associatedDataPin;
         private readonly byte[] _associatedData;
         private readonly PinnedMemory<byte> _key;
-        private readonly PinnedMemory<ulong> _memory;
+        private PinnedMemory<ulong> _memory;
         private Blocks _memoryBlocks;
         private int _memoryBlockCount;
         private int _segmentLength;
@@ -92,17 +93,8 @@ namespace Argon2.NetCore
             if (_salt.Length < 8)
                 throw new ArgumentException("Salt must be 8 bytes or more.");
 
-            var memoryBlocks = (uint)_memoryCost;
-            if (memoryBlocks < 2 * _syncPoints * _lanes)
-            {
-                memoryBlocks = 2 * _syncPoints * (uint)_lanes;
-            }
-
-            _segmentLength = (int)(memoryBlocks / (_lanes * _syncPoints));
-            _laneLength = _segmentLength * _syncPoints;
-            _memoryBlockCount = _laneLength * _lanes;
-            _memory = new PinnedMemory<ulong>(new ulong[_blockSize * _memoryBlockCount / 8]);
-            _memoryBlocks = new Blocks(_memory.ToArray(), _memoryBlockCount);
+            ValidateParameters();
+            ConfigureMemory();
         }
 
         public void Update(byte value)
@@ -127,6 +119,18 @@ namespace Argon2.NetCore
 
         public void DoFinal(PinnedMemory<byte> output, int offset)
         {
+            if (output == null)
+                throw new ArgumentNullException(nameof(output));
+
+            ValidateParameters();
+
+            if (offset < 0 || offset > output.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset), "Offset must be within the output buffer.");
+
+            if (output.Length - offset < _hashLength)
+                throw new ArgumentException("Output buffer is too small for the configured hash length.", nameof(output));
+
+            ConfigureMemory();
             Initialize();
             FillMemoryBlocks();
 
@@ -143,7 +147,53 @@ namespace Argon2.NetCore
             StoreBlock(blockhashBytes.ToArray(), blockhash);
             using var outputBytes = new PinnedMemory<byte>(new byte[_hashLength]);
             Blake2BLong(outputBytes.ToArray(), blockhashBytes.ToArray());
-            Array.Copy(outputBytes.ToArray(), 0, output.ToArray(), offset, output.Length);
+            Array.Copy(outputBytes.ToArray(), 0, output.ToArray(), offset, _hashLength);
+
+            ClearBuffer();
+        }
+
+        private void ClearBuffer()
+        {
+            if (_buffer == null)
+                return;
+
+            Array.Clear(_buffer, 0, _buffer.Length);
+            _buffer = null;
+        }
+
+        private void ValidateParameters()
+        {
+            if (_lanes <= 0)
+                throw new ArgumentOutOfRangeException(nameof(Lanes), "Lanes must be greater than zero.");
+
+            if (_threads <= 0)
+                throw new ArgumentOutOfRangeException(nameof(Threads), "Threads must be greater than zero.");
+
+            if (_timeCost <= 0)
+                throw new ArgumentOutOfRangeException(nameof(TimeCost), "TimeCost must be greater than zero.");
+
+            if (_hashLength < _minimumHashLength)
+                throw new ArgumentOutOfRangeException(nameof(HashLength), "HashLength must be at least 4 bytes.");
+
+            if (_memoryCost <= 0)
+                throw new ArgumentOutOfRangeException(nameof(MemoryCost), "MemoryCost must be greater than zero.");
+        }
+
+        private void ConfigureMemory()
+        {
+            _memory?.Dispose();
+
+            var memoryBlocks = (uint)_memoryCost;
+            if (memoryBlocks < 2 * _syncPoints * _lanes)
+            {
+                memoryBlocks = 2 * _syncPoints * (uint)_lanes;
+            }
+
+            _segmentLength = (int)(memoryBlocks / (_lanes * _syncPoints));
+            _laneLength = _segmentLength * _syncPoints;
+            _memoryBlockCount = _laneLength * _lanes;
+            _memory = new PinnedMemory<ulong>(new ulong[_blockSize * _memoryBlockCount / 8]);
+            _memoryBlocks = new Blocks(_memory.ToArray(), _memoryBlockCount);
         }
 
         private void Initialize()
@@ -908,6 +958,8 @@ namespace Argon2.NetCore
             _memory?.Dispose();
             _key?.Dispose();
             _associatedDataPin?.Dispose();
+
+            ClearBuffer();
         }
     }
 }
