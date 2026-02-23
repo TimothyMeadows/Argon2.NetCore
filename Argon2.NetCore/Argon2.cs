@@ -8,7 +8,10 @@
  */
 
 using System;
+using System.Buffers.Binary;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Numerics;
 using System.Threading;
 using PinnedMemory;
 
@@ -483,8 +486,7 @@ namespace Argon2.NetCore
             var buf = new ulong[_qwordsInBlock * 2];
             var blockR = new Block(buf, 0);
             var blockTmp = new Block(buf, 1);
-            blockR.Copy(refBlock);
-            blockR.Xor(prevBlock);
+            blockR.CopyXor(refBlock, prevBlock);
             blockTmp.Copy(blockR);
 
             // apply Blake2 on columns of 64-bit words:
@@ -610,8 +612,7 @@ namespace Argon2.NetCore
             var buf = new ulong[_qwordsInBlock * 2];
             var blockR = new Block(buf, 0);
             var blockTmp = new Block(buf, 1);
-            blockR.Copy(refBlock);
-            blockR.Xor(prevBlock);
+            blockR.CopyXor(refBlock, prevBlock);
             blockTmp.Copy(blockR);
             blockTmp.Xor(nextBlock); // saving the next block for XOR over
 
@@ -870,9 +871,16 @@ namespace Argon2.NetCore
 
         private void StoreBlock(byte[] buf, Block blockValues)
         {
+            if (BitConverter.IsLittleEndian)
+            {
+                var destWords = MemoryMarshal.Cast<byte, ulong>(buf.AsSpan(0, _blockSize));
+                blockValues.CopyTo(destWords);
+                return;
+            }
+
             for (var i = 0; i < _qwordsInBlock; ++i)
             {
-                Store64(buf, 8 * i, blockValues[i]);
+                BinaryPrimitives.WriteUInt64LittleEndian(buf.AsSpan(8 * i, 8), blockValues[i]);
             }
         }
 
@@ -890,9 +898,16 @@ namespace Argon2.NetCore
 
         private void LoadBlock(Block dst, byte[] src)
         {
+            if (BitConverter.IsLittleEndian)
+            {
+                var srcWords = MemoryMarshal.Cast<byte, ulong>(src.AsSpan(0, _blockSize));
+                dst.CopyFrom(srcWords);
+                return;
+            }
+
             for (var i = 0; i < _qwordsInBlock; ++i)
             {
-                dst[i] = Load64(src, i * 8);
+                dst[i] = BinaryPrimitives.ReadUInt64LittleEndian(src.AsSpan(i * 8, 8));
             }
         }
 
@@ -932,17 +947,34 @@ namespace Argon2.NetCore
                 set => this.memory[this.offset + i] = value;
             }
 
+            public Span<ulong> AsSpan()
+            {
+                return this.memory.AsSpan(this.offset, _qwordsInBlock);
+            }
+
             public void Copy(Block other)
             {
-                Array.Copy(other.memory, other.offset, this.memory, this.offset, _qwordsInBlock);
+                other.AsSpan().CopyTo(AsSpan());
             }
 
             public void Xor(Block other)
             {
-                for (var i = 0; i < _qwordsInBlock; ++i)
-                {
-                    this[i] ^= other[i];
-                }
+                XorSpans(AsSpan(), other.AsSpan());
+            }
+
+            public void CopyXor(Block left, Block right)
+            {
+                CopyXorSpans(AsSpan(), left.AsSpan(), right.AsSpan());
+            }
+
+            public void CopyTo(Span<ulong> destination)
+            {
+                AsSpan().CopyTo(destination);
+            }
+
+            public void CopyFrom(ReadOnlySpan<ulong> source)
+            {
+                source.CopyTo(AsSpan());
             }
 
             public void Init(ulong value)
@@ -950,6 +982,48 @@ namespace Argon2.NetCore
                 for (var i = 0; i < _qwordsInBlock; ++i)
                 {
                     this[i] = value;
+                }
+            }
+
+            private static void XorSpans(Span<ulong> destination, ReadOnlySpan<ulong> source)
+            {
+                var vectorWidth = Vector<ulong>.Count;
+                var i = 0;
+
+                if (Vector.IsHardwareAccelerated && destination.Length >= vectorWidth)
+                {
+                    for (; i <= destination.Length - vectorWidth; i += vectorWidth)
+                    {
+                        var vDest = new Vector<ulong>(destination.Slice(i, vectorWidth));
+                        var vSrc = new Vector<ulong>(source.Slice(i, vectorWidth));
+                        (vDest ^ vSrc).CopyTo(destination.Slice(i, vectorWidth));
+                    }
+                }
+
+                for (; i < destination.Length; ++i)
+                {
+                    destination[i] ^= source[i];
+                }
+            }
+
+            private static void CopyXorSpans(Span<ulong> destination, ReadOnlySpan<ulong> left, ReadOnlySpan<ulong> right)
+            {
+                var vectorWidth = Vector<ulong>.Count;
+                var i = 0;
+
+                if (Vector.IsHardwareAccelerated && destination.Length >= vectorWidth)
+                {
+                    for (; i <= destination.Length - vectorWidth; i += vectorWidth)
+                    {
+                        var vLeft = new Vector<ulong>(left.Slice(i, vectorWidth));
+                        var vRight = new Vector<ulong>(right.Slice(i, vectorWidth));
+                        (vLeft ^ vRight).CopyTo(destination.Slice(i, vectorWidth));
+                    }
+                }
+
+                for (; i < destination.Length; ++i)
+                {
+                    destination[i] = left[i] ^ right[i];
                 }
             }
         }

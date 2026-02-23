@@ -174,6 +174,18 @@ This ensures future verification and migration remain possible.
 
 ---
 
+
+## SIMD acceleration
+
+`Argon2.NetCore` now includes SIMD-aware optimizations in the Argon2 block/memory hot paths while preserving compatibility and deterministic output:
+
+- **Vectorized block XOR/copy-XOR paths** in the internal `Block` implementation (`Copy`, `Xor`, `CopyXor`) using `System.Numerics.Vector<ulong>` where hardware acceleration is available.
+- **Faster `FillBlock` / `FillBlockWithXor` setup** by using a single `CopyXor` operation for `refBlock ^ prevBlock` instead of separate copy and XOR passes.
+- **Optimized `LoadBlock` / `StoreBlock` transforms** on little-endian runtimes using `MemoryMarshal.Cast<byte, ulong>` bulk conversion with endian-safe fallback logic.
+- **Scalar fallback behavior remains intact**, so functionality is preserved on platforms without SIMD acceleration.
+
+These changes are designed to mirror the performance-oriented approach used in `Blake2b.NetCore` while keeping Argon2 algorithm behavior unchanged.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
