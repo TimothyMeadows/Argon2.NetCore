@@ -149,7 +149,7 @@ namespace Argon2.NetCore
             using var blockhashBytes = new PinnedMemory<byte>(new byte[_blockSize]);
             StoreBlock(blockhashBytes.ToArray(), blockhash);
             using var outputBytes = new PinnedMemory<byte>(new byte[_hashLength]);
-            Blake2BLong(outputBytes.ToArray(), blockhashBytes.ToArray());
+            Blake2BLong(outputBytes.ToArray(), _hashLength, blockhashBytes.ToArray(), _blockSize);
             Array.Copy(outputBytes.ToArray(), 0, output.ToArray(), offset, _hashLength);
 
             ClearBuffer();
@@ -271,10 +271,10 @@ namespace Argon2.NetCore
             {
                 Store32(blockhash, _prehashDigestLength, 0);
                 Store32(blockhash, _prehashDigestLength + 4, l);
-                Blake2BLong(blockhashBytes.ToArray(), blockhash);
+                Blake2BLong(blockhashBytes.ToArray(), _blockSize, blockhash, _prehashSeedLength);
                 LoadBlock(_memoryBlocks[l * _laneLength], blockhashBytes.ToArray());
                 Store32(blockhash, _prehashDigestLength, 1);
-                Blake2BLong(blockhashBytes.ToArray(), blockhash);
+                Blake2BLong(blockhashBytes.ToArray(), _blockSize, blockhash, _prehashSeedLength);
                 LoadBlock(_memoryBlocks[(l * _laneLength) + 1], blockhashBytes.ToArray());
             }
         }
@@ -784,29 +784,29 @@ namespace Argon2.NetCore
             return (original >> bits) | (original << (64 - bits));
         }
 
-        private void Blake2BLong(byte[] hash, byte[] inbuf)
+        private void Blake2BLong(byte[] hash, int hashLength, byte[] inbuf, int inputLength)
         {
             var outlenBytes = new byte[4];
-            var outputLength = hash.Length > 64 ? 64 : hash.Length;
+            var outputLength = hashLength > 64 ? 64 : hashLength;
             using var intermediateHash = new PinnedMemory<byte>(new byte[64]);
-            Store32(outlenBytes, hash.Length);
+            Store32(outlenBytes, hashLength);
             using (var blakeHash = new Blake2b.NetCore.Blake2b(outputLength * 8))
             {
                 blakeHash.UpdateBlock(outlenBytes, 0, outlenBytes.Length);
-                blakeHash.UpdateBlock(inbuf, 0, inbuf.Length);
+                blakeHash.UpdateBlock(inbuf, 0, inputLength);
                 blakeHash.DoFinal(intermediateHash, 0);
                 blakeHash.Reset();
             }
 
-            if (hash.Length <= intermediateHash.Length)
+            if (hashLength <= intermediateHash.Length)
             {
-                Array.Copy(intermediateHash.ToArray(), hash, hash.Length);
+                Array.Copy(intermediateHash.ToArray(), hash, hashLength);
                 return;
             }
 
             Array.Copy(intermediateHash.ToArray(), hash, 32);
             var pos = 32;
-            var lastHashIndex = hash.Length - 64;
+            var lastHashIndex = hashLength - 64;
             var toHash = new byte[64];
 
             while (pos < lastHashIndex)
@@ -822,7 +822,7 @@ namespace Argon2.NetCore
             }
 
             Array.Copy(intermediateHash.ToArray(), toHash, intermediateHash.Length);
-            var finalOutputLength = hash.Length - pos;
+            var finalOutputLength = hashLength - pos;
             using (var blakeHash = new Blake2b.NetCore.Blake2b(finalOutputLength * 8))
             {
                 blakeHash.UpdateBlock(toHash, 0, toHash.Length);
